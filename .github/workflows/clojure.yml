@@ -17,7 +17,7 @@ jobs:
         distribution: 'zulu'
         java-version: '11'
     - name: Setup Clojure
-      uses: DeLaGuardo/setup-clojure@1.2.5
+      uses: DeLaGuardo/setup-clojure@12.1
       with:
         lein: 2.10.0
     - name: Run tests
