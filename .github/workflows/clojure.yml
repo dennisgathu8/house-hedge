@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Leiningen
-      uses: deas/setup-leiningen@v1
+    - name: Setup Clojure
+      uses: clojure-lsp/setup-clojure@1.2.1
       with:
-        lein-version: 'latest'
+        lein: 2.10.0
     - name: Run tests
       run: lein test
     - name: Check Linting
