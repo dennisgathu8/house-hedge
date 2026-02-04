@@ -1,0 +1,44 @@
+# Leiningen
+/target
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+.hgignore
+.hg/
+
+# ClojureScript
+/resources/public/js/compiled
+figwheel_server.log
+pom.xml.asc
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+/out
+/.cpcache
+/data
+/node_modules
+npm-debug.log

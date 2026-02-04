@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The House Edge - Professional Betting Intelligence</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .tagline {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card h2 {
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            opacity: 0.8;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .positive {
+            color: #4ade80;
+        }
+        
+        .negative {
+            color: #f87171;
+        }
+        
+        .recommendations {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .rec-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #4ade80;
+        }
+        
+        .rec-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .match-title {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .ev-badge {
+            background: #4ade80;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .rec-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .detail-item {
+            text-align: center;
+        }
+        
+        .detail-label {
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+        
+        .detail-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .rationale {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid #f87171;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 THE HOUSE EDGE</h1>
+            <p class="tagline">"Every bet is a fact. Every edge is data. Every decision is forkable."</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2>📊 Bankroll</h2>
+                <div id="bankroll-metrics" class="loading">Loading...</div>
+            </div>
+            
+            <div class="card">
+                <h2>📈 Performance</h2>
+                <div id="performance-metrics" class="loading">Loading...</div>
+            </div>
+            
+            <div class="card">
+                <h2>⚡ Variance</h2>
+                <div id="variance-metrics" class="loading">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="recommendations">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>💎 Investment-Grade Recommendations</h2>
+                <button onclick="loadRecommendations()">🔄 Refresh</button>
+            </div>
+            <div id="recommendations-list" class="loading">Loading recommendations...</div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadBankroll() {
+            try {
+                const response = await fetch('/api/bankroll');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const { current_bankroll, snapshot, drawdown, risk_alert } = data.data;
+                    document.getElementById('bankroll-metrics').innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Current Balance</span>
+                            <span class="metric-value">$${current_bankroll.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Peak Balance</span>
+                            <span class="metric-value">$${snapshot.peak_balance.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">ROI</span>
+                            <span class="metric-value ${snapshot.roi >= 0 ? 'positive' : 'negative'}">
+                                ${(snapshot.roi * 100).toFixed(2)}%
+                            </span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Risk Status</span>
+                            <span class="metric-value">${risk_alert.alert.toUpperCase()}</span>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('bankroll-metrics').innerHTML = '<div class="error">Failed to load bankroll data</div>';
+            }
+        }
+        
+        async function loadPerformance() {
+            try {
+                const response = await fetch('/api/performance');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const metrics = data.data;
+                    document.getElementById('performance-metrics').innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Total Bets</span>
+                            <span class="metric-value">${metrics.total_bets}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Win Rate</span>
+                            <span class="metric-value">
+                                ${metrics.total_bets > 0 ? ((metrics.won / metrics.total_bets) * 100).toFixed(1) : 0}%
+                            </span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Sharpe Ratio</span>
+                            <span class="metric-value">${metrics.sharpe_ratio.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Avg Odds</span>
+                            <span class="metric-value">${metrics.avg_odds.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('performance-metrics').innerHTML = '<div class="error">Failed to load performance data</div>';
+            }
+        }
+        
+        async function loadVariance() {
+            try {
+                const response = await fetch('/api/variance');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const variance = data.data;
+                    document.getElementById('variance-metrics').innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Expected Profit</span>
+                            <span class="metric-value">$${variance.expected_profit.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Actual Profit</span>
+                            <span class="metric-value ${variance.actual_profit >= 0 ? 'positive' : 'negative'}">
+                                $${variance.actual_profit.toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Std Devs Away</span>
+                            <span class="metric-value">${variance.std_devs_away.toFixed(2)}σ</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Status</span>
+                            <span class="metric-value ${variance.within_expectations ? 'positive' : 'negative'}">
+                                ${variance.within_expectations ? '✓ Normal' : '⚠ Outlier'}
+                            </span>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('variance-metrics').innerHTML = '<div class="error">Failed to load variance data</div>';
+            }
+        }
+        
+        async function loadRecommendations() {
+            document.getElementById('recommendations-list').innerHTML = '<div class="loading">Loading recommendations...</div>';
+            
+            try {
+                const response = await fetch('/api/recommendations');
+                const data = await response.json();
+                
+                if (data.success && data.data.recommendations.length > 0) {
+                    const recs = data.data.recommendations;
+                    document.getElementById('recommendations-list').innerHTML = recs.map(rec => `
+                        <div class="rec-item">
+                            <div class="rec-header">
+                                <div class="match-title">${rec.match}</div>
+                                <div class="ev-badge">${rec.ev}</div>
+                            </div>
+                            <div style="opacity: 0.8; margin: 5px 0;">${rec.league} • ${rec.kickoff}</div>
+                            <div class="rec-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Selection</div>
+                                    <div class="detail-value">${rec.selection}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Odds</div>
+                                    <div class="detail-value">${rec.odds}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Stake</div>
+                                    <div class="detail-value">${rec.stake}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Confidence</div>
+                                    <div class="detail-value">${rec.confidence}</div>
+                                </div>
+                            </div>
+                            <div class="rationale">
+                                <strong>Rationale:</strong> ${rec.rationale}
+                                ${rec.sharp_signals > 0 ? `<br><strong>⚡ ${rec.sharp_signals} sharp signal(s) detected</strong>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('recommendations-list').innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.7;">No value bets found at the moment. Check back later!</div>';
+                }
+            } catch (error) {
+                document.getElementById('recommendations-list').innerHTML = '<div class="error">Failed to load recommendations</div>';
+            }
+        }
+        
+        // Load all data on page load
+        window.onload = () => {
+            loadBankroll();
+            loadPerformance();
+            loadVariance();
+            loadRecommendations();
+        };
+    </script>
+</body>
+</html>

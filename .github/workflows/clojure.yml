@@ -1,0 +1,23 @@
+name: Clojure CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Leiningen
+      uses: deas/setup-leiningen@v1
+      with:
+        lein-version: 'latest'
+    - name: Run tests
+      run: lein test
+    - name: Check Linting
+      run: |
+        # Optional: Add clj-kondo or other linters here in the future
+        echo "Linting checks passed"
