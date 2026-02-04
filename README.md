@@ -7,6 +7,47 @@
 
 ---
 
+## 🏗 System Architecture
+
+```mermaid
+graph TB
+    subgraph "Data Ingestion"
+        OD["Real-time Odds"]
+        PB["Public Betting %"]
+        ST["Team Stats / xG"]
+    end
+
+    subgraph "Intelligence Swarm"
+        Alpha[["Agent Alpha: Odds Engine"]]
+        Beta[["Agent Beta: Sharp Detector"]]
+        Delta[["Agent Delta: Match Analyst"]]
+        Epsilon[["Agent Epsilon: Slip Generator"]]
+    end
+
+    subgraph "Risk & Control"
+        Gamma[["Agent Gamma: Bankroll Guardian"]]
+        Zeta[["Agent Zeta: Performance Oracle"]]
+    end
+
+    OD --> Alpha
+    OD --> Beta
+    PB --> Beta
+    ST --> Delta
+
+    Alpha -- "EV Logic" --> Epsilon
+    Beta -- "Sharp Signals" --> Epsilon
+    Delta -- "Analysis Edge" --> Epsilon
+
+    Epsilon -- "Investment Slips" --> Gamma
+    
+    Gamma -- "Persistence" --> Ledger[("Immutable Ledger")]
+    
+    Ledger -- "Historical Audit" --> Zeta
+    Zeta -- "ROI / Sharpe" --> Dashboard("Web UI")
+```
+
+---
+
 ## 🚀 Why "The House Edge"?
 
 In a market dominated by emotional betting and surface-level stats, **The House Edge** treats sports betting as high-frequency financial trading. It leverages the unique power of **Clojure** to manage massive streams of concurrent data while maintaining a rigorous, immutable audit trail of every decision.
