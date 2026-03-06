@@ -2,6 +2,7 @@
   "Web server and API handlers"
   (:require [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
+            [ring.util.response :as response]
             [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
@@ -124,6 +125,9 @@
 (defroutes app-routes
   ;; Health check
   (GET "/health" [] health-check)
+  
+  ;; Frontend SPA entry point
+  (GET "/" [] (response/resource-response "index.html" {:root "public"}))
   
   ;; API endpoints
   (GET "/api/recommendations" [] get-recommendations)
