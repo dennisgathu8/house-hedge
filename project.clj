@@ -8,6 +8,7 @@
                  [org.clojure/clojurescript "1.11.60"]
                  [org.clojure/core.async "1.6.673"]
                  [org.clojure/data.json "2.4.0"]
+                 [clj-http "3.12.3"]
                  
                  ;; Web server
                  [ring/ring-core "1.10.0"]

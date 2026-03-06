@@ -4,7 +4,9 @@
   (:require [the-house-edge.protocol :as p]
             [the-house-edge.config :as config]
             [the-house-edge.util :as util]
+            [taoensso.timbre :as log]
             [the-house-edge.mock :as mock]
+            [the-house-edge.api.client :as api-client]
             [clojure.core.async :as async :refer [go go-loop chan <! >! >!! timeout]]))
 
 ;; ============================================================================
@@ -257,7 +259,14 @@
 (defn scan-weekend-fixtures
   "Scan weekend fixtures for value bets"
   []
-  (let [fixtures (mock/generate-weekend-slate)
+  (let [fixtures (if (config/mock-mode?)
+                   (mock/generate-weekend-slate)
+                   (let [live-data (api-client/parse-odds-response (api-client/fetch-live-odds))]
+                     (if (seq live-data)
+                       live-data
+                       (do
+                         (log/warn "Live odds fetch failed, falling back to mock data.")
+                         (mock/generate-weekend-slate)))))
         ;; Ingest all odds
         _ (doseq [fixture fixtures
                   odds (:odds fixture)]

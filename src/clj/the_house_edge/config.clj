@@ -19,7 +19,9 @@
    :odds
    {:update-interval-ms 30000  ;; 30 seconds
     :bookmakers [:pinnacle :betfair :bet365 :draftkings]
-    :mock-mode? true}  ;; Use mock data for MVP
+    :mock-mode? (Boolean/valueOf (env :mock-mode "false"))
+    :api-key (env :odds-api-key "mocked-key")
+    :base-url "https://api.the-odds-api.com/v4"}
    
    :sharp
    {:rlm-threshold 0.02        ;; 2% line movement against public
@@ -61,7 +63,8 @@
    {:rate-limit-per-minute 60
     :max-request-size-kb 1024
     :allowed-origins ["http://localhost:3000"
-                      "http://localhost:3449"]}  ;; Figwheel port
+                      "http://localhost:3449"]  ;; Figwheel port
+    :api-keys [(env :api-key "house-edge-dev-key")]}
    
    :logging
    {:level (keyword (env :log-level "info"))

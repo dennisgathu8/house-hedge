@@ -11,6 +11,7 @@
             [the-house-edge.performance.core :as performance]
             [the-house-edge.bankroll.core :as bankroll]
             [the-house-edge.odds.core :as odds]
+            [the-house-edge.web.middleware :as middleware]
             [taoensso.timbre :as log]))
 
 ;; ============================================================================
@@ -145,12 +146,14 @@
 
 (def app
   (-> app-routes
+      middleware/wrap-api-key-auth
+      middleware/wrap-rate-limit
       (wrap-defaults api-defaults)
       wrap-json-response
       (wrap-json-body {:keywords? true})
       (wrap-cors :access-control-allow-origin (config/get-config [:security :allowed-origins])
                  :access-control-allow-methods [:get :post]
-                 :access-control-allow-headers ["Content-Type"])))
+                 :access-control-allow-headers ["Content-Type" "X-API-Key"])))
 
 ;; ============================================================================
 ;; Server Control
