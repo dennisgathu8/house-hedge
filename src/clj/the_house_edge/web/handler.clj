@@ -127,7 +127,9 @@
   (GET "/health" [] health-check)
   
   ;; Frontend SPA entry point
-  (GET "/" [] (response/resource-response "index.html" {:root "public"}))
+  (GET "/" [] 
+    (-> (response/resource-response "index.html" {:root "public"})
+        (response/content-type "text/html; charset=utf-8")))
   
   ;; API endpoints
   (GET "/api/recommendations" [] get-recommendations)
