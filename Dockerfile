@@ -1,6 +1,9 @@
 # Build Stage
 FROM clojure:lein-2.9.10-alpine AS builder
 
+# Install Node.js for ClojureScript compilation
+RUN apk add --no-cache nodejs npm
+
 WORKDIR /app
 
 # Cache dependencies
