@@ -23,8 +23,6 @@
                  [re-frame "1.3.0"]
                  [day8.re-frame/http-fx "0.2.4"]
                  
-                 ;; HTTP client
-                 [clj-http "3.12.3"]
                  
                  ;; Time manipulation
                  [clj-time "0.15.2"]

@@ -63,8 +63,9 @@
    {:rate-limit-per-minute 60
     :max-request-size-kb 1024
     :allowed-origins ["http://localhost:3000"
-                      "http://localhost:3449"]  ;; Figwheel port
-    :api-keys [(env :api-key "house-edge-dev-key")]}
+                      "http://localhost:3449"
+                      "https://the-house-edge.fly.dev"]
+    :api-keys [(env :api-key)]}
    
    :logging
    {:level (keyword (env :log-level "info"))

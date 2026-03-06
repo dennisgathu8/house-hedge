@@ -16,21 +16,17 @@ FROM eclipse-temurin:11-jre-alpine
 
 WORKDIR /app
 
-# Create and expose data directory for the EDN persistent ledger
+# Create data directory for the EDN persistent ledger
 RUN mkdir -p /app/data
-VOLUME /app/data
 
-# Default Production Environment Variables
+# Secrets are injected by Fly.io at runtime — no defaults here
 ENV PORT=3000
 ENV HOST="0.0.0.0"
-ENV MOCK_MODE="false"
-ENV ODDS_API_KEY="your-odds-api-key-here"
-ENV API_KEY="your-secure-internal-auth-token"
-ENV LOG_LEVEL="info"
 
 # Copy the compiled uberjar from the builder stage
-COPY --from=builder /app/target/*-standalone.jar /app/the-house-edge.jar
+COPY --from=builder /app/target/uberjar/the-house-edge-standalone.jar /app/the-house-edge.jar
 
 EXPOSE 3000
 
-CMD ["java", "-jar", "the-house-edge.jar"]
+# JVM tuning for small containers
+CMD ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "the-house-edge.jar"]
