@@ -18,8 +18,8 @@
 (defonce ev-store (atom []))
 
 (defonce odds-channels
-  {:updates (chan 100)
-   :ev-results (chan 100)})
+  {:updates (chan (async/sliding-buffer 1000))
+   :ev-results (chan (async/sliding-buffer 1000))})
 
 ;; ============================================================================
 ;; Odds Ingestion
@@ -53,10 +53,18 @@
        last))
 
 (defn get-all-odds-for-match
-  "Get all current odds for a match across bookmakers"
+  "Get all current odds for a match across all available bookmakers"
   [match-id market]
-  (let [bookmakers (config/bookmakers)]
-    (mapv #(get-latest-odds match-id market (name %)) bookmakers)))
+  (->> @odds-store
+       (filter #(and (= (:match-id %) match-id)
+                     (= (:market %) market)))
+       (group-by :bookmaker)
+       (map (fn [[_bookmaker odds-list]]
+              (->> odds-list
+                   (sort-by :timestamp)
+                   last)))
+       (remove nil?)
+       vec))
 
 ;; ============================================================================
 ;; Expected Value Calculation
