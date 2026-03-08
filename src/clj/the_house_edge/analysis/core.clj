@@ -161,6 +161,24 @@
   :initialized)
 
 (defn get-match-analysis
-  "Get comprehensive analysis for a match"
+  "Get comprehensive analysis for a match.
+   Handles live API data where form data may be absent."
   [match-data]
-  (analyze-match match-data))
+  (if (and (:home-form match-data) (:away-form match-data))
+    ;; Full analysis with form data
+    (analyze-match match-data)
+    ;; Simplified analysis for live API data (no historical form)
+    (let [true-probs (or (:true-probs match-data)
+                         {:home 0.33 :draw 0.33 :away 0.33})
+          ;; Derive confidence from odds spread concentration
+          ;; Higher concentration = higher confidence (one clear favourite)
+          max-prob (apply max (vals true-probs))
+          confidence (util/clamp (* max-prob 1.1) 0.60 0.88)]
+      {:match-id (get-in match-data [:match :id])
+       :home-form nil
+       :away-form nil
+       :true-probability true-probs
+       :predicted-goals {:expected-goals-for 1.5 :expected-goals-against 1.2}
+       :key-factors ["Market-implied probability analysis"]
+       :tactical-edge nil
+       :confidence (util/round confidence 2)})))

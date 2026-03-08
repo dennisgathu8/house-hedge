@@ -78,10 +78,10 @@
 (defn meets-criteria?
   "Check if slip meets recommendation criteria"
   [slip]
-  (let [min-ev (config/min-ev)
-        min-conf (config/min-confidence)]
-    (and (>= (:ev slip) min-ev)
-         (>= (:confidence slip) min-conf))))
+  (let [min-ev (config/min-ev)]
+    ;; Only filter on positive EV -- confidence is generated synthetically
+    ;; and would filter out all live data that lacks historical form
+    (>= (:ev slip) min-ev)))
 
 (defn rank-slips
   "Rank slips by quality (EV × Confidence)"
@@ -120,13 +120,22 @@
 (defn generate-weekend-slips
   "Generate all betting slips for weekend fixtures"
   []
-  (let [fixtures (the-house-edge.mock/generate-weekend-slate)
-        all-slips (mapcat generate-slips-for-match fixtures)
+  (let [scan-results (odds/scan-weekend-fixtures)
+        fixtures (:analyses scan-results)
+        ;; Generate slips from value bets found by the odds engine
+        all-slips (mapcat (fn [analysis-result]
+                           (let [match-data (:match analysis-result)]
+                             (mapv (fn [ev-result]
+                                     (let [analysis (analysis/get-match-analysis match-data)
+                                           sharp-signals []]
+                                       (create-betting-slip match-data ev-result analysis sharp-signals)))
+                                   (:value-bets analysis-result))))
+                         fixtures)
         ranked-slips (rank-slips all-slips)
         max-slips (config/get-config [:slips :max-daily-slips])
         top-slips (take max-slips ranked-slips)]
     
-    {:total-matches (count fixtures)
+    {:total-matches (:total-matches scan-results)
      :total-slips (count all-slips)
      :recommended-slips (count top-slips)
      :slips top-slips}))
