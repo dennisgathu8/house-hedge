@@ -20,6 +20,8 @@
                  
                  ;; Frontend
                  [reagent "1.2.0"]
+                 [cljsjs/react "17.0.2-0"]
+                 [cljsjs/react-dom "17.0.2-0"]
                  [re-frame "1.3.0"]
                  [day8.re-frame/http-fx "0.2.4"]
                  

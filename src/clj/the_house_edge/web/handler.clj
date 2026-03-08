@@ -118,6 +118,23 @@
        :body {:success false
               :error "Failed to get bet history"}})))
 
+(defn track-bet
+  "Record a new bet from the dashboard"
+  [request]
+  (try
+    (let [body (:body request)
+          result (bankroll/track-bet! body)]
+      (if (:success result)
+        {:status 200
+         :body result}
+        {:status 400
+         :body result}))
+    (catch Exception e
+      (log/error e "Error processing track-bet request")
+      {:status 500
+       :body {:success false
+              :error "Internal server error while tracking bet"}})))
+
 ;; ============================================================================
 ;; Routes
 ;; ============================================================================
@@ -137,6 +154,7 @@
   (GET "/api/bankroll" [] get-bankroll-status)
   (GET "/api/variance" [] get-variance-report)
   (GET "/api/history" [] get-bet-history)
+  (POST "/api/bets/track" [] track-bet)
   
   ;; Static files
   (route/resources "/")
