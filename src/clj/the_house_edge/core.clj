@@ -153,6 +153,11 @@
       (log/info (str "\nStarting web server on port " (config/server-port) "..."))
       (web/start-server!)
       (log/info (str "✓ Server running at http://" (config/server-host) ":" (config/server-port)))
+      
+      ;; Start background recommendation worker (refresh every 5 minutes)
+      (slips/start-background-worker! 300000)
+      (log/info "✓ Background recommendation worker started (5 min interval)")
+      
       (log/info "\nThe House Edge is ready. Press Ctrl+C to stop."))
     
     ;; Keep alive

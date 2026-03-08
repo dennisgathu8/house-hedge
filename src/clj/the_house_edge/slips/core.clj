@@ -7,7 +7,19 @@
             [the-house-edge.odds.core :as odds]
             [the-house-edge.sharp.core :as sharp]
             [the-house-edge.bankroll.core :as bankroll]
-            [the-house-edge.analysis.core :as analysis]))
+            [the-house-edge.analysis.core :as analysis]
+            [taoensso.timbre :as log]))
+
+;; ============================================================================
+;; Cached Recommendations
+;; ============================================================================
+
+(defonce cached-recommendations
+  (atom {:total-matches 0
+         :total-slips 0
+         :recommended-slips 0
+         :slips []
+         :last-refresh nil}))
 
 ;; ============================================================================
 ;; Recommendation Generation
@@ -169,10 +181,52 @@
   []
   :initialized)
 
-(defn get-recommendations
-  "Get current betting recommendations"
+(defn refresh-recommendations!
+  "Refresh the cached recommendations from live data.
+   Called by the background worker thread."
   []
-  (generate-weekend-slips))
+  (try
+    (log/info "Refreshing recommendations from live data...")
+    (let [result (generate-weekend-slips)]
+      (reset! cached-recommendations
+              (assoc result :last-refresh (java.util.Date.)))
+      (log/info (str "✓ Recommendations refreshed: "
+                     (:total-matches result) " matches, "
+                     (:recommended-slips result) " value bets found")))
+    (catch Exception e
+      (log/error e "Failed to refresh recommendations"))))
+
+(defonce worker-running? (atom false))
+
+(defn start-background-worker!
+  "Start a background thread that refreshes recommendations periodically."
+  [interval-ms]
+  (when-not @worker-running?
+    (reset! worker-running? true)
+    (future
+      (log/info (str "Background recommendation worker started (interval: " (/ interval-ms 1000) "s)"))
+      ;; Initial fetch
+      (refresh-recommendations!)
+      ;; Periodic refresh loop
+      (while @worker-running?
+        (try
+          (Thread/sleep interval-ms)
+          (when @worker-running?
+            (refresh-recommendations!))
+          (catch InterruptedException _
+            (log/info "Background worker interrupted"))
+          (catch Exception e
+            (log/error e "Error in background worker loop")))))))
+
+(defn stop-background-worker!
+  "Stop the background refresh worker."
+  []
+  (reset! worker-running? false))
+
+(defn get-recommendations
+  "Get current betting recommendations (returns cached data instantly)"
+  []
+  @cached-recommendations)
 
 (defn get-slip-by-id
   "Get specific slip by ID"
