@@ -1,79 +1,59 @@
-# The House Edge: Professional Betting Intelligence Platform 📈💰
+# The House Edge
 
-[![Logic](https://img.shields.io/badge/Logic-Kelly_Criterion-green?style=for-the-badge)](https://github.com/dennisgathu8/house-hedge)
-[![ROI](https://img.shields.io/badge/ROI-Sharp_Money_Detection-yellow?style=for-the-badge)](https://github.com/dennisgathu8/house-hedge)
+This is a sports betting odds analyzer. It looks for value bets (positive expected value / +EV) by comparing odds across multiple bookmakers.
 
-**The House Edge** is a professional intelligence platform that treats sports betting with the rigor of high-frequency financial trading. Built with Clojure, it manages massive streams of concurrent data while maintaining a rigorous, immutable audit trail of every decision.
+## What it actually does
 
-### 🏗️ Why "The House Edge"?
-In a market dominated by emotional betting and surface-level stats, The House Edge provides a systematic edge through:
-- **Sharp Money Detection:** Identifying when the "smart money" moves before the public.
-- **Real-time Odds Analysis:** High-frequency monitoring of 50+ bookmakers.
-- **Algorithmic Bankroll Management:** Applying the Kelly Criterion to maximize long-term ROI.
+It fetches live odds from The Odds API for several soccer leagues (EPL, La Liga, Serie A, Champions League). It parses the data to find the "consensus" implied probability of an outcome by averaging the odds across every available bookmaker. 
 
-### ### Transferability to Football Scouting
-While built for the betting markets, the core engine of The House Edge is a direct blueprint for modern football recruitment:
-- **Player Value Inefficiencies:** The same multi-agent logic that finds value in betting lines is used to identify undervalued talent in the KPL and regional leagues.
-- **Risk Management for Transfers:** Applying financial risk thresholds to recruitment budgets ensures every transfer is backed by data-driven ROI analysis.
-- **Moneyball for Africa:** Turning betting intelligence into a tactical recruitment edge for East African clubs.
+If one specific bookmaker is offering odds that are significantly higher than the consensus average (yielding an EV of > 2%), it flags it as a value bet and calculates a recommended stake using a fractional Kelly Criterion.
 
----
+It uses a background thread to poll the external API every 5 minutes and caches the results in memory. The frontend is a Single Page Application that reads this cache.
 
-<details>
-<summary>📐 Full Technical Architecture & Design</summary>
+## What it DOES NOT do
 
-## 🏗 System Architecture
-```mermaid
-graph TB
-    subgraph "Data Ingestion"
-        OD["Real-time Odds"]
-        PB["Public Betting %"]
-        ST["Team Stats / xG"]
-    end
-    subgraph "Intelligence Swarm"
-        Alpha[["Agent Alpha: Odds Engine"]]
-        Beta[["Agent Beta: Sharp Detector"]]
-        Delta[["Agent Delta: Match Analyst"]]
-        Epsilon[["Agent Epsilon: Slip Generator"]]
-    end
-    subgraph "Risk & Control"
-        Gamma[["Agent Gamma: Bankroll Guardian"]]
-        Zeta[["Agent Zeta: Performance Oracle"]]
-    end
-    OD --> Alpha
-    OD --> Beta
-    PB --> Beta
-    ST --> Delta
-    Alpha -- "EV Logic" --> Epsilon
-    Beta -- "Sharp Signals" --> Epsilon
-    Delta -- "Analysis Edge" --> Epsilon
-    Epsilon -- "Investment Slips" --> Gamma
-    Gamma -- "Persistence" --> Ledger[("Immutable Ledger")]
-    Ledger -- "Historical Audit" --> Zeta
-    Zeta -- "ROI / Sharpe" --> Dashboard("Web UI")
+- It does not guarantee you will make money. If you don't understand variance or how bookmakers limit winning accounts, you will probably lose money. 
+- It does not have artificial intelligence or machine learning. It is basic arithmetic, probability theory, and core.async channels applied to JSON payloads.
+- It does not automatically place bets for you. 
+
+## Architecture
+
+It's written entirely in Clojure and ClojureScript.
+
+**Backend:**
+- `core.async` `sliding-buffer` channels are used to concurrently ingest and process the odds without deadlocking the memory threads.
+- An in-memory `atom` caches the latest computations so the API endpoint doesn't block and returns instantly.
+- A standard Ring/Jetty HTTP server provides the API and serves the static assets.
+
+**Frontend:**
+- Built with Reagent and re-frame.
+- Polls the backend every 60 seconds to refresh the dashboard.
+- Includes a basic API key authorization gate ("The Vault").
+
+## Running it
+
+You need Java 11+ and Leiningen.
+
+1. Get an API key from [The Odds API](https://the-odds-api.com/).
+2. Set it in your environment: `export ODDS_API_KEY="your_key"`
+3. If you want to use the frontend Vault, set your own security key: `export API_KEY="your_secret"`
+4. Start the server:
+   ```bash
+   lein run
+   ```
+5. The server listens on `http://localhost:3000`.
+
+To compile the ClojureScript frontend locally:
+```bash
+lein run -m cljs.main --build app
 ```
 
-## 🧠 The Multi-Agent Architecture
-The system is built as a collaborative swarm of specialized agents:
-- **Agent Alpha (Odds Engine):** Real-time normalization of global odds.
-- **Agent Beta (Sharp Detector):** Filters volume vs. movement to find institutional money.
-- **Agent Gamma (Bankroll Guardian):** Enforces Kelly Criterion and stop-losses.
-- **Agent Delta (Match Analyst):** Ingests xG and historical form.
+## Deployment
 
-## 💎 The Clojure Advantage
-- **Immutability by Default:** Every line movement is stored as immutable data.
-- **Concurrency (Agents & Atoms):** Non-blocking analysis of 50+ bookmakers simultaneously.
-- **Data-Driven Logic:** Prismatic Schema for strict inter-agent communication.
-- **REPL-Driven Development:** Hot-reloading strategies in production.
+There's a `Dockerfile` included. It uses multi-stage builds to compile the uberjar and packages it into a minimal Alpine JRE image. It is currently configured for Fly.io deployments.
 
-## 🛠 Tech Stack
-- **Lisp Runtime:** Clojure 1.11
-- **UI Architecture:** ClojureScript + Reagent + Re-frame
-- **Persistence:** EDN-based immutable ledger
-- **Server:** Ring + Jetty + Compojure
-- **Validation:** Prismatic Schema
+```bash
+flyctl deploy
+```
 
-</details>
-
----
-**Open for collaborations with KPL clubs & scouting teams — DM me!**
+That's it.
