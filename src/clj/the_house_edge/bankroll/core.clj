@@ -123,12 +123,14 @@
 ;; ============================================================================
 
 (defn current-bankroll
-  "Calculate current bankroll from ledger"
+  "Calculate available bankroll from ledger (initial + profit - pending stakes)"
   []
   (let [initial (config/initial-bankroll)
         settled-bets (filter #(not= (:result %) :pending) @bet-ledger)
-        total-profit (reduce + 0 (map #(or (:profit %) 0) settled-bets))]
-    (+ initial total-profit)))
+        pending-bets (filter #(= (:result %) :pending) @bet-ledger)
+        total-profit (reduce + 0 (map #(or (:profit %) 0) settled-bets))
+        pending-staked (reduce + 0 (map :stake pending-bets))]
+    (- (+ initial total-profit) pending-staked)))
 
 (defn peak-bankroll
   "Calculate peak bankroll achieved"
@@ -291,3 +293,35 @@
   "Get all settled bets"
   []
   (filter #(not= (:result %) :pending) @bet-ledger))
+
+(defn track-bet!
+  "Public API to track a new bet from the dashboard"
+  [{:keys [match selection odds stake confidence]}]
+  (try
+    (let [;; Handle strings like "$25.00" or raw numbers
+          stake-val (if (string? stake)
+                      (Double/parseDouble (clojure.string/replace stake #"^\\$" ""))
+                      (double stake))
+          odds-val (if (string? odds) (Double/parseDouble odds) (double odds))
+          current (current-bankroll)]
+      
+      (when (> stake-val current)
+        (throw (ex-info "Insufficient funds" {:current current :requested stake-val})))
+        
+      (let [bet-record (create-bet (util/uuid) "MATCH_ODDS" selection odds-val stake-val :kelly 0.05)
+            ;; Add match details and confidence not natively supported by create-bet yet
+            extended-bet (assoc bet-record 
+                                :match match 
+                                :confidence confidence)]
+        
+        ;; Save to ledger using the internal record-bet
+        (record-bet extended-bet)
+        
+        ;; Return Success
+        {:success true
+         :new-balance (current-bankroll)
+         :bet extended-bet}))
+         
+    (catch Exception e
+      (log/error e "Failed to track bet")
+      {:success false :error (.getMessage e)})))
