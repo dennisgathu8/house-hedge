@@ -29,41 +29,73 @@
       (log/error e "Exception while fetching live odds")
       nil)))
 
+(defn- extract-bookie-prices
+  "Extract home/draw/away prices from a single bookmaker entry"
+  [bookie home-team away-team]
+  (let [market (first (:markets bookie))
+        outcomes (or (:outcomes market) [])
+        home-odds (some #(when (= (:name %) home-team) (:price %)) outcomes)
+        away-odds (some #(when (= (:name %) away-team) (:price %)) outcomes)
+        draw-odds (some #(when (= (:name %) "Draw") (:price %)) outcomes)]
+    (when (and home-odds away-odds draw-odds)
+      {:bookmaker (or (:title bookie) (:key bookie))
+       :home home-odds
+       :draw draw-odds
+       :away away-odds})))
+
 (defn parse-odds-response
-  "Translates The Odds API response into our internal match data package"
+  "Translates The Odds API response into our internal match data package.
+   Uses ALL bookmakers to derive consensus true probability and emits
+   per-bookmaker odds entries so the EV engine can find cross-market value."
   [api-data sport-key]
   (when api-data
-    (mapv (fn [match]
-            (let [bookmakers (:bookmakers match)
-                  first-bookie (first bookmakers)
-                  market (first (:markets first-bookie))
-                  outcomes (:outcomes market)
-                  home-odds (some #(when (= (:name %) (:home_team match)) (:price %)) outcomes)
-                  away-odds (some #(when (= (:name %) (:away_team match)) (:price %)) outcomes)
-                  draw-odds (some #(when (= (:name %) "Draw") (:price %)) outcomes)
-                  ;; Mock true probabilities based on live odds (removing margin)
-                  ;; Since this is Phase 2, we generate approximate implied probs
-                  inv-home (/ 1.0 (or home-odds 2.0))
-                  inv-draw (/ 1.0 (or draw-odds 3.0))
-                  inv-away (/ 1.0 (or away-odds 3.0))
-                  total-inv (+ inv-home inv-draw inv-away)
-                  true-probs {:home (/ inv-home total-inv) 
-                              :draw (/ inv-draw total-inv) 
-                              :away (/ inv-away total-inv)}
-                  prices [(or home-odds 2.0) (or draw-odds 3.0) (or away-odds 3.0)]
-                  match-uuid (java.util.UUID/randomUUID)
-                  match-obj {:id match-uuid
-                             :home-team (:home_team match)
-                             :away-team (:away_team match)
-                             :league (get sport-names sport-key sport-key)}]
-              
-              {:match match-obj
-               :true-probs true-probs
-               :odds [{:bookmaker "Pinnacle"
-                       :match-id match-uuid
-                       :market :match-result
-                       :prices prices
-                       :timestamp (java.util.Date.)}]
-               :sharp-signal nil
-               :line-history {:opening-line prices :current-line prices}}))
-          api-data)))
+    (->> api-data
+         (map (fn [match]
+                (try
+                  (let [home-team (:home_team match)
+                       away-team (:away_team match)
+                       bookmakers (:bookmakers match)
+                       ;; Extract prices from ALL bookmakers
+                       all-prices (->> bookmakers
+                                       (map #(extract-bookie-prices % home-team away-team))
+                                       (remove nil?))]
+                    (when (seq all-prices)
+                       ;; Consensus true probability: average implied probs across ALL bookmakers
+                      (let [avg-home (/ (reduce + (map :home all-prices)) (count all-prices))
+                            avg-draw (/ (reduce + (map :draw all-prices)) (count all-prices))
+                            avg-away (/ (reduce + (map :away all-prices)) (count all-prices))
+                            inv-home (/ 1.0 avg-home)
+                            inv-draw (/ 1.0 avg-draw)
+                            inv-away (/ 1.0 avg-away)
+                            total-inv (+ inv-home inv-draw inv-away)
+                            true-probs {:home (/ inv-home total-inv)
+                                        :draw (/ inv-draw total-inv)
+                                        :away (/ inv-away total-inv)}
+                       
+                            match-uuid (java.util.UUID/randomUUID)
+                            match-obj {:id match-uuid
+                                       :home-team home-team
+                                       :away-team away-team
+                                       :league (get sport-names sport-key sport-key)
+                                       :kickoff (:commence_time match)}
+                       
+                            ;; Emit one odds entry PER bookmaker so find-best-odds works
+                            odds-entries (mapv (fn [bp]
+                                                {:bookmaker (:bookmaker bp)
+                                                 :match-id match-uuid
+                                                 :market :match-result
+                                                 :prices [(:home bp) (:draw bp) (:away bp)]
+                                                 :timestamp (java.util.Date.)})
+                                              all-prices)]
+                   
+                        {:match match-obj
+                         :true-probs true-probs
+                         :odds odds-entries
+                         :sharp-signal nil
+                         :line-history {:opening-line [avg-home avg-draw avg-away]
+                                        :current-line [(:home (last all-prices))
+                                                       (:draw (last all-prices))
+                                                       (:away (last all-prices))]}})))
+                  (catch Exception _ nil))))
+         (remove nil?)
+         vec)))

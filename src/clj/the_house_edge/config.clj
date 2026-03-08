@@ -50,7 +50,7 @@
     :matches-lookback 10}       ;; Recent matches to analyze
    
    :slips
-   {:min-ev 0.05               ;; 5% minimum edge to recommend
+   {:min-ev 0.02               ;; 2% minimum edge to recommend
     :min-confidence 0.70        ;; 70% minimum confidence
     :max-daily-slips 10         ;; Limit recommendations
     :markets [:match-result     ;; Markets to cover
