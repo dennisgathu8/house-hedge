@@ -40,7 +40,11 @@
                  [com.fasterxml.jackson.core/jackson-core "2.15.2"]
                  [com.fasterxml.jackson.core/jackson-databind "2.15.2"]
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-cbor "2.15.2"]
-                 [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.15.2"]]
+                 [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.15.2"]
+                 
+                 ;; Overrides to resolve lein deps conflicts
+                 [commons-io "2.11.0"]
+                 [org.clojure/tools.logging "1.2.4"]]
   
   :plugins [[lein-cljsbuild "1.1.8"]
             [lein-figwheel "0.5.20"]
