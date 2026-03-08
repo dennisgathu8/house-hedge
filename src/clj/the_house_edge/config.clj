@@ -21,7 +21,11 @@
     :bookmakers [:pinnacle :betfair :bet365 :draftkings]
     :mock-mode? (Boolean/valueOf (env :mock-mode "false"))
     :api-key (env :odds-api-key "mocked-key")
-    :base-url "https://api.the-odds-api.com/v4"}
+    :base-url "https://api.the-odds-api.com/v4"
+    :active-leagues ["soccer_epl" 
+                     "soccer_spain_la_liga" 
+                     "soccer_italy_serie_a" 
+                     "soccer_uefa_champs_league"]}
    
    :sharp
    {:rlm-threshold 0.02        ;; 2% line movement against public
@@ -85,6 +89,7 @@
 
 (defn mock-mode? [] (get-config [:odds :mock-mode?]))
 (defn bookmakers [] (get-config [:odds :bookmakers]))
+(defn active-leagues [] (get-config [:odds :active-leagues]))
 
 (defn default-strategy [] (get-config [:bankroll :default-strategy]))
 (defn initial-bankroll [] (get-config [:bankroll :initial-bankroll]))

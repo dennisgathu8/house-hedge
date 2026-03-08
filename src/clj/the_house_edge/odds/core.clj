@@ -256,12 +256,27 @@
   (stop-odds-stream)
   :shutdown)
 
+(defn fetch-all-active-leagues
+  "Fetch live odds concurrently for all configured active leagues"
+  []
+  (let [leagues (config/active-leagues)]
+    (->> leagues
+         (pmap (fn [league]
+                 (try
+                   (api-client/parse-odds-response (api-client/fetch-live-odds league) league)
+                   (catch Exception e
+                     (log/error e "Failed to fetch odds for league" league)
+                     nil))))
+         (apply concat)
+         (remove nil?)
+         vec)))
+
 (defn scan-weekend-fixtures
   "Scan weekend fixtures for value bets"
   []
   (let [fixtures (if (config/mock-mode?)
                    (mock/generate-weekend-slate)
-                   (let [live-data (api-client/parse-odds-response (api-client/fetch-live-odds))]
+                   (let [live-data (fetch-all-active-leagues)]
                      (if (seq live-data)
                        live-data
                        (do
