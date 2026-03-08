@@ -17,7 +17,7 @@
   (let [root-el (.getElementById js/document "app")]
     (rdom/render [views/main-panel] root-el)))
 
-(defn init []
+(defn ^:export init []
   (re-frame/dispatch-sync [:initialize-db])
   (dev-setup)
   (mount-root))
