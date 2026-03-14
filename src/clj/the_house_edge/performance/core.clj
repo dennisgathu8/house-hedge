@@ -4,7 +4,11 @@
   (:require [the-house-edge.protocol :as p]
             [the-house-edge.config :as config]
             [the-house-edge.util :as util]
-            [the-house-edge.bankroll.core :as bankroll]))
+            [the-house-edge.bankroll.core :as bankroll]
+            [the-house-edge.analysis.core :as analysis]
+            [the-house-edge.mock :as mock]
+            [clojure.java.io :as io]
+            [clojure.edn :as edn]))
 
 ;; ============================================================================
 ;; ROI & Yield Calculation
@@ -257,3 +261,135 @@
       strategy (query-by-strategy strategy)
       (and start-date end-date) (query-by-date-range start-date end-date)
       predicate (time-travel-query predicate))))
+
+;; ============================================================================
+;; Historical Simulation (Baseline)
+;; ============================================================================
+
+(defn calculate-brier-score
+  "Calculate Brier score for predictions.
+   Lower is better. Perfect score = 0, worst = 1.0 (for single outcome)"
+  [predicted-probs actual-outcome]
+  (let [outcomes {:home 0, :draw 1, :away 2}
+        actual-idx (get outcomes actual-outcome)
+        actual-vector (case actual-idx
+                        0 [1.0 0.0 0.0]
+                        1 [0.0 1.0 0.0]
+                        2 [0.0 0.0 1.0])]
+    (reduce + (map (fn [p a]
+                     (Math/pow (- p a) 2))
+                   [(:home predicted-probs) (:draw predicted-probs) (:away predicted-probs)]
+                   actual-vector))))
+
+(defn backtest-matches
+  "Run a backtest on historical matches"
+  [matches true-prob-fn edge-threshold]
+  (let [results
+        (keep (fn [match-data]
+                (let [match (:match match-data)
+                      ;; Collect all prices for each outcome across all bookmakers
+                      home-odds (map #(nth (:prices %) 0) (:odds match-data))
+                      draw-odds (map #(nth (:prices %) 1) (:odds match-data))
+                      away-odds (map #(nth (:prices %) 2) (:odds match-data))
+                      
+                      best-home (apply max home-odds)
+                      best-draw (apply max draw-odds)
+                      best-away (apply max away-odds)
+                      
+                      ;; Get model probabilities. Default to mock consensus true probs if function absent
+                      probs (if true-prob-fn
+                              (true-prob-fn match-data)
+                              (:true-probs match-data))
+                      
+                      brier (calculate-brier-score probs (:actual-result match-data))
+                      
+                      ;; Check value against BEST available odds
+                      selections [{:idx 0 :name :home :prob (:home probs) :odd best-home}
+                                  {:idx 1 :name :draw :prob (:draw probs) :odd best-draw}
+                                  {:idx 2 :name :away :prob (:away probs) :odd best-away}]
+                      
+                      value-bets (filter #(> (- (* (:prob %) (:odd %)) 1.0) edge-threshold) selections)
+                      
+                      ;; Pick the best value bet if any
+                      best-bet (when (seq value-bets)
+                                 (apply max-key #(- (* (:prob %) (:odd %)) 1.0) value-bets))
+                                 
+                      clv-beat (if best-bet
+                                 (let [close-odds (:current-line (:line-history match-data))]
+                                   (calculate-clv (:odd best-bet) (nth close-odds (:idx best-bet))))
+                                 0.0)]
+                  
+                  ;; Learn Elo rating AFTER predictions are made
+                  (analysis/update-elo! (:home-team match) (:away-team match) (:actual-result match-data))
+                  
+                  (when best-bet
+                    (let [won? (= (:name best-bet) (:actual-result match-data))
+                          stake 10.0 ;; 1u
+                          profit (if won? (* stake (dec (:odd best-bet))) (- stake))
+                          ev (- (* (:prob best-bet) (:odd best-bet)) 1.0)]
+                      {:match-id (:id match)
+                       :bet-on (:name best-bet)
+                       :prob (:prob best-bet)
+                       :odds (:odd best-bet)
+                       :ev ev
+                       :won? won?
+                       :profit profit
+                       :clv clv-beat
+                       :brier brier}))))
+              matches)
+        
+        bets-placed (count results)
+        wins (count (filter :won? results))
+        total-profit (reduce + (map :profit results))
+        total-staked (* bets-placed 10.0)
+        roi (if (pos? total-staked) (/ total-profit total-staked) 0.0)
+        hit-rate (if (pos? bets-placed) (/ wins bets-placed) 0.0)
+        avg-edge (util/mean (map :ev results))
+        avg-clv (util/mean (map :clv results))
+        avg-brier (util/mean (map :brier results))]
+    {:period "2024-2025"
+     :matches-analyzed (count matches)
+     :bets-placed bets-placed
+     :hit-rate hit-rate
+     :roi roi
+     :total-profit (util/round total-profit 2)
+     :average-edge-captured avg-edge
+     :average-clv-beat avg-clv
+     :average-brier-score avg-brier}))
+
+(defn generate-baseline-dataset
+  [num-matches]
+  (let [fixtures (repeatedly num-matches mock/generate-weekend-fixtures)]
+    (->> (mapcat identity fixtures)
+         (take num-matches)
+         (mapv (fn [match]
+                 (let [data (mock/generate-complete-match-data match)
+                       outcome (util/weighted-random
+                                 [:home :draw :away]
+                                 [(:home (:true-probs data))
+                                  (:draw (:true-probs data))
+                                  (:away (:true-probs data))])]
+                   (assoc data :actual-result outcome)))))))
+
+(defn run-baseline-simulation!
+  "Generate a mock historical dataset and run the simulator to get baseline metrics"
+  []
+  (let [matches (generate-baseline-dataset 150)
+        baseline (backtest-matches matches nil 0.005)
+        save-path "data/baseline-20250308.edn"]
+    (io/make-parents save-path)
+    (spit save-path (pr-str {:metrics baseline :raw-data matches}))
+    baseline))
+
+(defn run-poisson-simulation!
+  "Run the simulator using the new Poisson-blended probabilities"
+  []
+  (reset! analysis/elo-ratings {})  ;; Reset memory for fresh start
+  (let [save-path "data/baseline-20250308.edn"
+        data (edn/read-string (slurp save-path))
+        matches (:raw-data data)
+        poisson-fn (fn [match-data] (:true-probability (analysis/get-match-analysis match-data)))
+        ;; Ensure eager evaluation for Elo state mutation
+        results (backtest-matches (vec matches) poisson-fn 0.005)]
+    results))
+

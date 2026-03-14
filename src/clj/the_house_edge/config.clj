@@ -42,7 +42,11 @@
     :initial-bankroll 1000.0}   ;; Starting bankroll for demo
    
    :analysis
-   {:xg-weight 0.4             ;; xG data weight in probability
+   {:apply-calibration true    ;; Post-process output probabilities
+    :consensus-weight 0.55     ;; Weight for consensus probabilities
+    :poisson-weight 0.30       ;; Weight for Poisson simulation probabilities
+    :elo-weight 0.15           ;; Weight for Elo model probabilities
+    :xg-weight 0.4             ;; xG data weight in probability
     :form-weight 0.3            ;; Recent form weight
     :tactical-weight 0.2        ;; Tactical analysis weight
     :market-weight 0.1          ;; Market odds weight
@@ -50,7 +54,7 @@
     :matches-lookback 10}       ;; Recent matches to analyze
    
    :slips
-   {:min-ev 0.02               ;; 2% minimum edge to recommend
+   {:min-ev 0.012              ;; 1.2% minimum edge to recommend
     :min-confidence 0.70        ;; 70% minimum confidence
     :max-daily-slips 10         ;; Limit recommendations
     :markets [:match-result     ;; Markets to cover

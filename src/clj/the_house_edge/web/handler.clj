@@ -41,6 +41,8 @@
           formatted-slips (mapv slips/format-slip-for-display (:slips recs))]
       {:status 200
        :body {:success true
+              :metadata {:model-version "v2.0-poisson-elo"
+                         :blended-probs true}
               :data {:total-matches (:total-matches recs)
                      :total-slips (:total-slips recs)
                      :recommended-count (:recommended-slips recs)

@@ -7,6 +7,8 @@
             [taoensso.timbre :as log]
             [the-house-edge.mock :as mock]
             [the-house-edge.api.client :as api-client]
+            [the-house-edge.analysis.core :as analysis-core]
+            [the-house-edge.bankroll.core :as bankroll]
             [clojure.core.async :as async :refer [go go-loop chan <! >! >!! timeout]]))
 
 ;; ============================================================================
@@ -96,15 +98,43 @@
       ;; Return a dummy object with 0 odds if no data available
       {:bookmaker "None" :odds 0.0 :timestamp (util/now)})))
 
+;; ============================================================================
+;; Movement Penalties
+;; ============================================================================
+
+(defn calculate-movement-penalty
+  "Calculate a penalty multiplier (0.1 to 1.0) if line has moved significantly against the bet"
+  [line-history selection-index]
+  (if-let [opening (when line-history (nth (:opening-line line-history) selection-index nil))]
+    (if-let [current (when line-history (nth (:current-line line-history) selection-index nil))]
+      (let [movement (/ (- current opening) opening)]
+        ;; movement is positive if odds lengthened, negative if shortened
+        ;; if odds lengthened (which means expected probability decreased by market), it's moving AGAINST our bet.
+        (if (> movement 0.04)
+          (util/clamp (- 1.0 (* (- movement 0.04) 10.0)) 0.1 1.0)
+          1.0))
+      1.0)
+    1.0))
+
 (defn calculate-ev-for-selection
   "Calculate EV for a specific selection using best available odds"
-  [match-id market selection-index true-prob]
-  (let [best-odds (find-best-odds match-id market selection-index)
+  [match-data market selection-index true-prob]
+  (let [match-id (get-in match-data [:match :id])
+        best-odds (find-best-odds match-id market selection-index)
         ev (calculate-ev true-prob (:odds best-odds))
-        kelly-frac (config/kelly-fraction)
+        base-kelly-frac (config/kelly-fraction)
         bankroll (config/initial-bankroll)
+        
+        line-history (:line-history match-data)
+        movement-penalty (if line-history
+                           (calculate-movement-penalty line-history selection-index)
+                           1.0)
+                           
+        dispersion-multiplier (bankroll/calculate-dispersion-multiplier (:odds match-data) selection-index)
+        final-kelly-frac (* base-kelly-frac movement-penalty dispersion-multiplier)
+        
         kelly-stake (when (pos? ev)
-                     (util/kelly-criterion bankroll ev (:odds best-odds) kelly-frac))]
+                     (util/kelly-criterion bankroll ev (:odds best-odds) final-kelly-frac))]
     {:match-id match-id
      :market market
      :selection (case selection-index
@@ -121,14 +151,14 @@
 (defn analyze-match-ev
   "Analyze all selections for a match and find value bets"
   [match-data]
-  (let [match-id (get-in match-data [:match :id])
-        market :match-result
-        true-probs (:true-probs match-data)
+  (let [market :match-result
+        analysis (analysis-core/get-match-analysis match-data)
+        true-probs (:true-probability analysis)
         selections [{:index 0 :prob (:home true-probs)}
                    {:index 1 :prob (:draw true-probs)}
                    {:index 2 :prob (:away true-probs)}]
         ev-results (mapv #(calculate-ev-for-selection 
-                           match-id 
+                           match-data 
                            market 
                            (:index %) 
                            (:prob %))

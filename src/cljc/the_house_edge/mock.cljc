@@ -71,8 +71,8 @@
         margin (:margin bookmaker)
         probs-with-margin (add-bookmaker-margin true-probs margin)
         odds (probabilities-to-odds probs-with-margin)
-        ;; Add some random variation
-        varied-odds (map #(* % (util/random-between 0.98 1.02)) odds)]
+        ;; Add some random variation to simulate market inefficiencies
+        varied-odds (map #(* % (util/random-between 0.94 1.06)) odds)]
     {:bookmaker (:name bookmaker)
      :match-id match-id
      :market :match-result

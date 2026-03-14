@@ -237,6 +237,18 @@
       :else {:alert :ok
              :message "Within acceptable variance"})))
 
+(defn calculate-dispersion-multiplier
+  "Scale fractional Kelly by consensus dispersion (bookmaker prob std dev).
+   Higher dispersion -> lower multiplier (more conservative)."
+  [odds-list selection-index]
+  (if (> (count odds-list) 1)
+    (let [probs (map #(util/odds-to-probability (nth (:prices %) selection-index)) odds-list)
+          std-dev (util/standard-deviation probs)]
+      (if (and std-dev (> std-dev 0.015))
+        (util/clamp (- 1.0 (* (- std-dev 0.015) 15.0)) 0.4 1.0)
+        1.0))
+    1.0))
+
 ;; ============================================================================
 ;; Staking Decision
 ;; ============================================================================

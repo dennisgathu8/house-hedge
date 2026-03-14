@@ -61,7 +61,7 @@
     (let [uri (:uri request)
           api-keys (config/get-config [:security :api-keys])
           provided-key (get-in request [:headers "x-api-key"])]
-      (if (str/starts-with? uri "/api/")
+      (if (clojure.string/starts-with? uri "/api/")
         (if (some #{provided-key} api-keys)
           ;; Valid key -> pass to next handler
           (handler request)
@@ -70,6 +70,6 @@
             (log/warn (str "Unauthorized API access attempt to " uri " from " (:remote-addr request)))
             {:status 401
              :headers {"Content-Type" "application/json"}
-             :body (json/write-str {:success false :error "Unauthorized: Invalid or missing X-API-Key"})}))
+             :body {:success false :error "Unauthorized: Invalid or missing X-API-Key"}}))
         ;; Not an /api/ route -> bypass auth
         (handler request)))))
